@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 
 import os, sys
-import ConfigParser, json, random
+import ConfigParser, json, random, collections
 import UnRAR2
 from UnRAR2.rar_exceptions import *
 import zipfile
@@ -35,11 +35,27 @@ path_to_folder_containing_extracted_files = config.get('extractor', 'path_to_fol
 path_to_log_file = config.get('extractor', 'path_to_log_file')
 enable_debug_log = config.get('extractor', 'enable_debug_log')
 
+# output debug log after we passed config.ini
+if enable_debug_log == 'true':
+    with open(path_to_log_file, 'a+') as f:
+        f.write('config.ini parsed result:\n')
+        f.write('\tstatus update interval: %d' % (status_update_interval,))
+        f.write('\tpath to extractions text file: ' + path_to_extractions_text_file)
+        f.write('\tpath to folder containing archives to extract: ' + path_to_folder_containg_archives_to_extract)
+        f.write('\tpath to folder containing extracted files: ' + path_to_folder_containing_extracted_files)
+        f.write('\tpath to log file: ' + path_to_log_file)
+        f.write('\tenable debug log: ' + enable_debug_log)
+
 actual_file_path = path_to_folder_containg_archives_to_extract + os.path.sep + file_name
 
 error_string = ''
 out_dir = get_random_dir(path_to_folder_containing_extracted_files)
 real_out_dir = path_to_folder_containing_extracted_files + os.path.sep + out_dir
+
+# output debug log when starting to extract
+if enable_debug_log == 'true':
+    with open(path_to_log_file, 'a+') as f:
+        f.write('start to extract ' + actual_file_path + '...'
 
 if file_name.endswith('.zip'):
 
@@ -74,22 +90,33 @@ else:
     print 'Pass .zip or .rar file instead!'
     os.exit(1)
 
-lines = open(path_to_extractions_text_file).readlines()
-
+# output entry's status and message
 status = 'finished'
 message = out_dir
 if error_string != '':
     status = 'error'
     message = error_string
-entry = [ '\t{\n',
-          '\t\n',
-          '\t\t"file":"' + file_name + '",\n',
-          '\t\t"status":"' + status + '",\n',
-          '\t\t"message":"' + message + '"\n',
-          '\t}\n',
-          ']\n'
-        ]
-lines = lines[:-1] + entry
 
+# output debug log when it's done
+if enable_debug_log == 'true':
+    with open(path_to_log_file, 'a+') as f:
+        if error_string != '':
+            f.write('failed (' + message + ')')
+        else:
+            f.write('succeed!')
+
+other_entries = []
+
+try:
+    f = open(path_to_extractions_text_file)
+    entries = json.load(f, object_pairs_hook=collections.OrderedDict)
+    f.close()
+
+    other_entries = [item for item in entries if item['file'] != file_name]
+except:
+    pass
+
+this_entry = collections.OrderedDict([('file', file_name), ('status', status), ('message', message)])
+all_entries = other_entries + this_entry
 with open(path_to_extractions_text_file, 'w+') as f:
-    f.writelines(lines)
+    f.write(json.dumps(all_entries, sort_keys=False, indent=4))

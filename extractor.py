@@ -17,7 +17,7 @@ def get_random_dir(root_dir):
 
 if len(sys.argv) != 3 or sys.argv[1] != '-f':
     print 'Usage: extractor.exe -f <file>'
-    os.exit(1)
+    sys.exit(1)
 
 file_name = sys.argv[2]
 
@@ -26,7 +26,7 @@ try:
     config.readfp(open('config.ini'))
 except:
     print 'Make sure the "config.ini" file is under this directory!'
-    os.exit(1)
+    sys.exit(1)
 
 status_update_interval = int(config.get('extractor', 'status_update_interval'))
 path_to_extractions_text_file = config.get('extractor', 'path_to_extractions_text_file')
@@ -39,12 +39,12 @@ enable_debug_log = config.get('extractor', 'enable_debug_log')
 if enable_debug_log == 'true':
     with open(path_to_log_file, 'a+') as f:
         f.write('config.ini parsed result:\n')
-        f.write('\tstatus update interval: %d' % (status_update_interval,))
-        f.write('\tpath to extractions text file: ' + path_to_extractions_text_file)
-        f.write('\tpath to folder containing archives to extract: ' + path_to_folder_containg_archives_to_extract)
-        f.write('\tpath to folder containing extracted files: ' + path_to_folder_containing_extracted_files)
-        f.write('\tpath to log file: ' + path_to_log_file)
-        f.write('\tenable debug log: ' + enable_debug_log)
+        f.write('\tstatus update interval: %d' % (status_update_interval,) + '\n')
+        f.write('\tpath to extractions text file: ' + path_to_extractions_text_file + '\n')
+        f.write('\tpath to folder containing archives to extract: ' + path_to_folder_containg_archives_to_extract + '\n')
+        f.write('\tpath to folder containing extracted files: ' + path_to_folder_containing_extracted_files + '\n')
+        f.write('\tpath to log file: ' + path_to_log_file + '\n')
+        f.write('\tenable debug log: ' + enable_debug_log + '\n')
 
 actual_file_path = path_to_folder_containg_archives_to_extract + os.path.sep + file_name
 
@@ -55,7 +55,7 @@ real_out_dir = path_to_folder_containing_extracted_files + os.path.sep + out_dir
 # output debug log when starting to extract
 if enable_debug_log == 'true':
     with open(path_to_log_file, 'a+') as f:
-        f.write('start to extract ' + actual_file_path + '...'
+        f.write('start to extract ' + actual_file_path + ' ... ')
 
 if file_name.endswith('.zip'):
 
@@ -86,9 +86,7 @@ elif file_name.endswith('.rar'):
         error_string = 'Unknown Errors.'
 
 else:
-    print 'Unknown file type.'
-    print 'Pass .zip or .rar file instead!'
-    os.exit(1)
+    error_string = 'Unknown file type.'
 
 # output entry's status and message
 status = 'finished'
@@ -101,22 +99,22 @@ if error_string != '':
 if enable_debug_log == 'true':
     with open(path_to_log_file, 'a+') as f:
         if error_string != '':
-            f.write('failed (' + message + ')')
+            f.write('failed (' + message + ')\n')
         else:
-            f.write('succeed!')
+            f.write('succeed!\n')
 
-other_entries = []
+entries = []
 
 try:
     f = open(path_to_extractions_text_file)
     entries = json.load(f, object_pairs_hook=collections.OrderedDict)
     f.close()
 
-    other_entries = [item for item in entries if item['file'] != file_name]
+    entries = [item for item in entries if item['file'] != file_name]
 except:
     pass
 
 this_entry = collections.OrderedDict([('file', file_name), ('status', status), ('message', message)])
-all_entries = other_entries + this_entry
+entries.append(this_entry)
 with open(path_to_extractions_text_file, 'w+') as f:
-    f.write(json.dumps(all_entries, sort_keys=False, indent=4))
+    f.write(json.dumps(entries, sort_keys=False, indent=4))
